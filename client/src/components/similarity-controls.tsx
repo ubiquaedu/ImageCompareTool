@@ -30,16 +30,18 @@ export function SimilarityControls({
   onRescan
 }: SimilarityControlsProps) {
   const [selectedPath, setSelectedPath] = useState<string>("");
+  const [fileCount, setFileCount] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // In a real app, we'd get the path, but browsers obscure the real system path for security.
-      // We can mock it or show the folder name relative to the upload.
-      // For the mockup, let's pretend we got a full path or just show the folder name.
-      // e.target.files[0].webkitRelativePath usually starts with the folder name.
-      const folderName = e.target.files[0].webkitRelativePath.split('/')[0];
-      setSelectedPath(`~/Pictures/${folderName}`);
+      // Browser security prevents accessing the full system path. 
+      // We can only see the relative structure within the selected folder.
+      const files = e.target.files;
+      const folderName = files[0].webkitRelativePath.split('/')[0];
+      
+      setSelectedPath(folderName);
+      setFileCount(files.length);
     }
   };
 
@@ -77,9 +79,19 @@ export function SimilarityControls({
                 </Button>
             </div>
             {selectedPath && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <div className="text-xs font-mono text-muted-foreground break-all bg-muted/50 p-2 rounded border">
-                        Target: {selectedPath}
+                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="bg-muted/50 p-3 rounded border space-y-2">
+                        <div className="text-xs font-mono text-muted-foreground break-all">
+                            <span className="font-semibold text-foreground">Selected:</span> {selectedPath}
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                           <span className="text-muted-foreground">Files detected:</span>
+                           <span className="font-mono font-medium text-primary">{fileCount}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-green-600 bg-green-500/10 px-2 py-1 rounded w-fit">
+                            <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                            Local Client-Side Scan
+                        </div>
                     </div>
                     <Button 
                       size="sm" 
@@ -87,7 +99,7 @@ export function SimilarityControls({
                       onClick={onRescan}
                     >
                         <Play className="h-3 w-3 mr-2" />
-                        Rescan Directory
+                        Start Local Analysis
                     </Button>
                 </div>
             )}
