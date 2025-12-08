@@ -184,17 +184,15 @@ export default function Home() {
   };
 
   const handleDeleteExact = () => {
+    // Explanation for the user: Browsers cannot delete files from disk
     toast({
-      title: "Processing Deletion",
-      description: "Removing all exact duplicates (100% match)...",
+      title: "Browser Limitation",
+      description: "Web apps cannot delete files from your hard drive directly due to security sandboxing.",
+      variant: "destructive"
     });
-    // Mock logic
-    setTimeout(() => {
-        toast({
-            title: "Cleanup Complete",
-            description: "Removed 1 exact duplicate file.",
-        });
-    }, 1000);
+    
+    // In a real desktop app (Electron/Tauri), we would call:
+    // await window.api.deleteFiles(exactDuplicates);
   };
 
   const handleDeleteLowSimilarity = () => {
