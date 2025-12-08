@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { MOCK_GROUPS, DuplicateGroup } from "@/lib/mock-data";
+import { useState, useEffect } from "react";
+import { MOCK_GROUPS, DuplicateGroup, ImageFile } from "@/lib/mock-data";
 import { ComparisonView } from "@/components/comparison-view";
 import { SimilarityControls } from "@/components/similarity-controls";
 import { Button } from "@/components/ui/button";
@@ -9,14 +9,87 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function Home() {
   const [groups, setGroups] = useState<DuplicateGroup[]>(MOCK_GROUPS);
+  const [isRealData, setIsRealData] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [threshold, setThreshold] = useState(90);
   const { toast } = useToast();
 
   const currentGroup = groups[currentIndex];
 
-  // Filter groups based on threshold logic (mock implementation)
-  // Real app would filter the list. Here we just use the threshold for the "Delete Low Similarity" action
+  // Cleanup object URLs when component unmounts or data changes
+  useEffect(() => {
+    return () => {
+      if (isRealData) {
+        groups.forEach(group => {
+          group.images.forEach(img => {
+            if (img.src.startsWith('blob:')) {
+              URL.revokeObjectURL(img.src);
+            }
+          });
+        });
+      }
+    };
+  }, [groups, isRealData]);
+
+  const handleFilesSelected = (fileList: FileList) => {
+    toast({
+      title: "Processing Files",
+      description: `Analyzing ${fileList.length} files locally...`,
+    });
+
+    // Simple algorithm to group files for demonstration
+    // In a real app, this would use pixel comparison
+    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+    const newGroups: DuplicateGroup[] = [];
+
+    // Group files in pairs just for the demo
+    for (let i = 0; i < files.length - 1; i += 2) {
+      const file1 = files[i];
+      const file2 = files[i + 1];
+      
+      if (!file1 || !file2) break;
+
+      const group: DuplicateGroup = {
+        id: `local-group-${i}`,
+        similarity: Math.floor(Math.random() * (100 - 80) + 80), // Mock similarity
+        images: [
+          {
+            id: `local-${i}`,
+            src: URL.createObjectURL(file1),
+            name: file1.name,
+            size: `${(file1.size / 1024 / 1024).toFixed(2)} MB`,
+            resolution: "Unknown", // Would need to load image to get this
+            date: new Date(file1.lastModified).toLocaleString(),
+          },
+          {
+            id: `local-${i+1}`,
+            src: URL.createObjectURL(file2),
+            name: file2.name,
+            size: `${(file2.size / 1024 / 1024).toFixed(2)} MB`,
+            resolution: "Unknown",
+            date: new Date(file2.lastModified).toLocaleString(),
+          }
+        ]
+      };
+      newGroups.push(group);
+    }
+
+    if (newGroups.length > 0) {
+      setGroups(newGroups);
+      setIsRealData(true);
+      setCurrentIndex(0);
+      toast({
+        title: "Analysis Complete",
+        description: `Created ${newGroups.length} comparison groups from your files.`,
+      });
+    } else {
+      toast({
+        title: "No Images Found",
+        description: "Could not find enough image pairs in the selected folder.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleToggleMark = (imageId: string) => {
     setGroups(prevGroups => {
@@ -177,6 +250,7 @@ export default function Home() {
         onDeleteExact={handleDeleteExact}
         onDeleteLowSimilarity={handleDeleteLowSimilarity}
         onRescan={handleRescan}
+        onFilesSelected={handleFilesSelected}
       />
     </div>
   );

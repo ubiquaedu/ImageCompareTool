@@ -20,6 +20,7 @@ interface SimilarityControlsProps {
   onDeleteExact: () => void;
   onDeleteLowSimilarity: () => void;
   onRescan: () => void;
+  onFilesSelected: (files: FileList) => void;
 }
 
 export function SimilarityControls({
@@ -27,7 +28,8 @@ export function SimilarityControls({
   setThreshold,
   onDeleteExact,
   onDeleteLowSimilarity,
-  onRescan
+  onRescan,
+  onFilesSelected
 }: SimilarityControlsProps) {
   const [selectedPath, setSelectedPath] = useState<string>("");
   const [fileCount, setFileCount] = useState<number>(0);
@@ -42,6 +44,7 @@ export function SimilarityControls({
       
       setSelectedPath(folderName);
       setFileCount(files.length);
+      onFilesSelected(files);
     }
   };
 
