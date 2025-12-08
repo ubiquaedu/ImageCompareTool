@@ -19,13 +19,15 @@ interface SimilarityControlsProps {
   setThreshold: (val: number) => void;
   onDeleteExact: () => void;
   onDeleteLowSimilarity: () => void;
+  onRescan: () => void;
 }
 
 export function SimilarityControls({
   threshold,
   setThreshold,
   onDeleteExact,
-  onDeleteLowSimilarity
+  onDeleteLowSimilarity,
+  onRescan
 }: SimilarityControlsProps) {
   const [selectedPath, setSelectedPath] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,7 +81,11 @@ export function SimilarityControls({
                     <div className="text-xs font-mono text-muted-foreground break-all bg-muted/50 p-2 rounded border">
                         Target: {selectedPath}
                     </div>
-                    <Button size="sm" className="w-full bg-primary/10 text-primary hover:bg-primary/20 shadow-none border-transparent">
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-primary/10 text-primary hover:bg-primary/20 shadow-none border-transparent"
+                      onClick={onRescan}
+                    >
                         <Play className="h-3 w-3 mr-2" />
                         Rescan Directory
                     </Button>

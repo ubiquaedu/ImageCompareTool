@@ -86,6 +86,20 @@ export default function Home() {
     }
   };
 
+  const handleRescan = () => {
+    toast({
+        title: "Scanning Directory",
+        description: "Analyzing images for duplicates...",
+    });
+    // Mock delay
+    setTimeout(() => {
+        toast({
+            title: "Scan Complete",
+            description: "Found 3 potential duplicate groups.",
+        });
+    }, 1500);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground flex overflow-hidden">
       {/* Main Content Area */}
@@ -162,6 +176,7 @@ export default function Home() {
         setThreshold={setThreshold}
         onDeleteExact={handleDeleteExact}
         onDeleteLowSimilarity={handleDeleteLowSimilarity}
+        onRescan={handleRescan}
       />
     </div>
   );
