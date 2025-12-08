@@ -7,6 +7,8 @@ import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { computeImageHash, calculateSimilarity } from "@/lib/image-processing";
+
 export default function Home() {
   const [allGroups, setAllGroups] = useState<DuplicateGroup[]>(MOCK_GROUPS);
   const [isRealData, setIsRealData] = useState(false);
@@ -39,61 +41,117 @@ export default function Home() {
     };
   }, [allGroups, isRealData]);
 
-  const handleFilesSelected = (fileList: FileList) => {
+  const handleFilesSelected = async (fileList: FileList) => {
     toast({
       title: "Processing Files",
       description: `Analyzing ${fileList.length} files locally...`,
     });
 
-    // Simple algorithm to group files for demonstration
-    // In a real app, this would use pixel comparison
     const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
-    const newGroups: DuplicateGroup[] = [];
-
-    // Group files in pairs just for the demo
-    for (let i = 0; i < files.length - 1; i += 2) {
-      const file1 = files[i];
-      const file2 = files[i + 1];
-      
-      if (!file1 || !file2) break;
-
-      const group: DuplicateGroup = {
-        id: `local-group-${i}`,
-        similarity: Math.floor(Math.random() * (100 - 60) + 60), // Mock similarity range 60-100
-        images: [
-          {
-            id: `local-${i}`,
-            src: URL.createObjectURL(file1),
-            name: file1.name,
-            size: `${(file1.size / 1024 / 1024).toFixed(2)} MB`,
-            resolution: "Unknown", // Would need to load image to get this
-            date: new Date(file1.lastModified).toLocaleString(),
-          },
-          {
-            id: `local-${i+1}`,
-            src: URL.createObjectURL(file2),
-            name: file2.name,
-            size: `${(file2.size / 1024 / 1024).toFixed(2)} MB`,
-            resolution: "Unknown",
-            date: new Date(file2.lastModified).toLocaleString(),
-          }
-        ]
-      };
-      newGroups.push(group);
+    
+    if (files.length < 2) {
+      toast({
+        title: "Not Enough Images",
+        description: "Please select a folder with at least 2 images.",
+        variant: "destructive"
+      });
+      return;
     }
 
-    if (newGroups.length > 0) {
-      setAllGroups(newGroups);
-      setIsRealData(true);
-      setCurrentIndex(0);
+    try {
+      // 1. Compute hashes for all images
+      const hashedImages = await Promise.all(files.map(async (file) => {
+        try {
+          const hash = await computeImageHash(file);
+          return { file, hash };
+        } catch (e) {
+          console.error("Failed to hash image:", file.name);
+          return null;
+        }
+      }));
+
+      const validImages = hashedImages.filter(item => item !== null) as { file: File, hash: string }[];
+      
+      // 2. Compare all pairs (O(n^2) - simple implementation for demo)
+      const newGroups: DuplicateGroup[] = [];
+      const usedIndices = new Set<number>();
+
+      for (let i = 0; i < validImages.length; i++) {
+        if (usedIndices.has(i)) continue;
+
+        let bestMatchIndex = -1;
+        let bestSimilarity = 0;
+
+        for (let j = i + 1; j < validImages.length; j++) {
+          if (usedIndices.has(j)) continue;
+
+          const similarity = calculateSimilarity(validImages[i].hash, validImages[j].hash);
+          
+          if (similarity > bestSimilarity) {
+            bestSimilarity = similarity;
+            bestMatchIndex = j;
+          }
+        }
+
+        // Only group if similarity is reasonable (e.g. > 60%) to avoid random pairing
+        if (bestMatchIndex !== -1 && bestSimilarity >= 60) {
+           usedIndices.add(i);
+           usedIndices.add(bestMatchIndex);
+
+           const file1 = validImages[i].file;
+           const file2 = validImages[bestMatchIndex].file;
+
+           newGroups.push({
+            id: `group-${i}-${bestMatchIndex}`,
+            similarity: bestSimilarity,
+            images: [
+              {
+                id: `img-${i}`,
+                src: URL.createObjectURL(file1),
+                name: file1.name,
+                size: `${(file1.size / 1024 / 1024).toFixed(2)} MB`,
+                resolution: "Unknown",
+                date: new Date(file1.lastModified).toLocaleString(),
+              },
+              {
+                id: `img-${bestMatchIndex}`,
+                src: URL.createObjectURL(file2),
+                name: file2.name,
+                size: `${(file2.size / 1024 / 1024).toFixed(2)} MB`,
+                resolution: "Unknown",
+                date: new Date(file2.lastModified).toLocaleString(),
+              }
+            ]
+           });
+        }
+      }
+
+      // Add remaining images as singles? No, this is a diff tool, only show pairs.
+      
+      if (newGroups.length > 0) {
+        // Sort by similarity (descending)
+        newGroups.sort((a, b) => b.similarity - a.similarity);
+        
+        setAllGroups(newGroups);
+        setIsRealData(true);
+        setCurrentIndex(0);
+        toast({
+          title: "Analysis Complete",
+          description: `Found ${newGroups.length} similar pairs using perceptual hashing.`,
+        });
+      } else {
+        toast({
+          title: "No Similar Images",
+          description: "No significant similarities found in the selected folder.",
+          variant: "default"
+        });
+      }
+
+    } catch (error) {
+      console.error("Analysis failed", error);
       toast({
-        title: "Analysis Complete",
-        description: `Created ${newGroups.length} comparison groups from your files.`,
-      });
-    } else {
-      toast({
-        title: "No Images Found",
-        description: "Could not find enough image pairs in the selected folder.",
+        title: "Error",
+        description: "Failed to analyze images.",
         variant: "destructive"
       });
     }
