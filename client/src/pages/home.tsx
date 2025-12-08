@@ -8,19 +8,27 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Home() {
-  const [groups, setGroups] = useState<DuplicateGroup[]>(MOCK_GROUPS);
+  const [allGroups, setAllGroups] = useState<DuplicateGroup[]>(MOCK_GROUPS);
   const [isRealData, setIsRealData] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [threshold, setThreshold] = useState(90);
   const { toast } = useToast();
 
+  // Filter groups based on threshold
+  const groups = allGroups.filter(g => g.similarity >= threshold);
+  
+  // If current index is out of bounds after filtering, reset it
+  if (currentIndex >= groups.length && groups.length > 0) {
+      setCurrentIndex(0);
+  }
+  
   const currentGroup = groups[currentIndex];
 
   // Cleanup object URLs when component unmounts or data changes
   useEffect(() => {
     return () => {
       if (isRealData) {
-        groups.forEach(group => {
+        allGroups.forEach(group => {
           group.images.forEach(img => {
             if (img.src.startsWith('blob:')) {
               URL.revokeObjectURL(img.src);
@@ -29,7 +37,7 @@ export default function Home() {
         });
       }
     };
-  }, [groups, isRealData]);
+  }, [allGroups, isRealData]);
 
   const handleFilesSelected = (fileList: FileList) => {
     toast({
@@ -51,7 +59,7 @@ export default function Home() {
 
       const group: DuplicateGroup = {
         id: `local-group-${i}`,
-        similarity: Math.floor(Math.random() * (100 - 80) + 80), // Mock similarity
+        similarity: Math.floor(Math.random() * (100 - 60) + 60), // Mock similarity range 60-100
         images: [
           {
             id: `local-${i}`,
@@ -75,7 +83,7 @@ export default function Home() {
     }
 
     if (newGroups.length > 0) {
-      setGroups(newGroups);
+      setAllGroups(newGroups);
       setIsRealData(true);
       setCurrentIndex(0);
       toast({
@@ -92,7 +100,7 @@ export default function Home() {
   };
 
   const handleToggleMark = (imageId: string) => {
-    setGroups(prevGroups => {
+    setAllGroups(prevGroups => {
       return prevGroups.map(group => {
         if (group.id === currentGroup.id) {
           return {
@@ -161,16 +169,9 @@ export default function Home() {
 
   const handleRescan = () => {
     toast({
-        title: "Scanning Directory",
-        description: "Analyzing images for duplicates...",
+        title: "Updating View",
+        description: `Showing ${groups.length} groups with similarity >= ${threshold}%`,
     });
-    // Mock delay
-    setTimeout(() => {
-        toast({
-            title: "Scan Complete",
-            description: "Found 3 potential duplicate groups.",
-        });
-    }, 1500);
   };
 
   return (
@@ -226,19 +227,26 @@ export default function Home() {
         {/* Comparison Stage */}
         <main className="flex-1 p-6 overflow-hidden flex flex-col">
             <AnimatePresence mode="wait">
-                <motion.div
-                    key={currentGroup.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="h-full"
-                >
-                    <ComparisonView 
-                        group={currentGroup} 
-                        onToggleMark={handleToggleMark} 
-                    />
-                </motion.div>
+                {currentGroup ? (
+                    <motion.div
+                        key={currentGroup.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="h-full"
+                    >
+                        <ComparisonView 
+                            group={currentGroup} 
+                            onToggleMark={handleToggleMark} 
+                        />
+                    </motion.div>
+                ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                        <p className="text-lg font-medium">No matches found</p>
+                        <p className="text-sm">Try lowering the similarity threshold</p>
+                    </div>
+                )}
             </AnimatePresence>
         </main>
       </div>
