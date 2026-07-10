@@ -4,6 +4,7 @@ const fs = require('fs');
 
 function createWindow() {
   const win = new BrowserWindow({
+    title: "ImageDiff Pro",
     width: 1200,
     height: 800,
     webPreferences: {
@@ -19,7 +20,7 @@ function createWindow() {
   // win.loadFile('dist/public/index.html'); 
   
   // OR for dev mode (if you run 'npm run dev' separately):
-  win.loadURL('http://localhost:5000');
+  win.loadFile('dist/public/index.html');
 
   // Open links in external browser
   win.webContents.setWindowOpenHandler(({ url }) => {
