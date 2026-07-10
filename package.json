@@ -1,8 +1,23 @@
 {
   "name": "ImageDiff-Pro",
   "version": "1.0.0",
+  "description": "ImageDiff Pro - A fast and professional tool to find and delete duplicate and similar images locally on your PC.",
+  "author": "ImageDiff Pro",
   "type": "module",
   "license": "MIT",
+  "build": {
+    "appId": "com.imagediffpro.app",
+    "productName": "ImageDiff Pro",
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "build/icon.ico",
+      "dist/**/*",
+      "electron-main.cjs",
+      "electron-preload.cjs"
+    ]
+  },
   "scripts": {
     "dev:client": "vite dev --port 5000",
     "dev": "NODE_ENV=development tsx server/index.ts",
