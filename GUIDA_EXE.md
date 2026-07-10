@@ -29,8 +29,8 @@ Se non lo hai già, scarica e installa **Node.js** (versione LTS) dal sito uffic
 
 ## 4. Configura Electron
 Ho già creato per te due file essenziali nella root del progetto:
-- `electron-main.js`: Il cervello dell'app desktop (gestisce le finestre e i file).
-- `electron-preload.js`: Il ponte sicuro tra interfaccia e sistema.
+- `electron-main.cjs`: Il cervello dell'app desktop (gestisce le finestre e i file).
+- `electron-preload.cjs`: Il ponte sicuro tra interfaccia e sistema.
 
 Devi solo modificare il file `package.json` (che trovi nella cartella scaricata) aggiungendo queste righe:
 
@@ -38,7 +38,7 @@ Apri `package.json` con un editor di testo (come Blocco Note o VS Code) e:
 
 1. Modifica la riga `"main"` (o aggiungila se manca):
    ```json
-   "main": "electron-main.js",
+   "main": "electron-main.cjs",
    ```
 
 2. Aggiungi questo comando nella sezione `"scripts"`:
@@ -56,8 +56,8 @@ Apri `package.json` con un editor di testo (come Blocco Note o VS Code) e:
      },
      "files": [
        "dist/**/*",
-       "electron-main.js",
-       "electron-preload.js"
+       "electron-main.cjs",
+       "electron-preload.cjs"
      ]
    }
    ```
