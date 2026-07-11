@@ -48,7 +48,7 @@ export function ComparisonView({ group, onToggleMark, onToggleMarkAll }: Compari
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {group.images.map((img) => (
           <ImageCard 
             key={img.id} 
@@ -85,16 +85,16 @@ function ImageCard({
   return (
     <div 
       className={cn(
-        "relative group flex flex-col rounded-xl border bg-card overflow-hidden transition-all duration-300",
+        "relative group flex flex-col rounded-xl border bg-card overflow-hidden transition-all duration-300 min-h-[300px]",
         isMarked ? "border-destructive/50 ring-1 ring-destructive/20 opacity-60" : "border-border hover:border-primary/50"
       )}
     >
       {/* Image Container */}
-      <div className="relative flex-1 bg-black/5 overflow-hidden">
+      <div className="relative flex-1 min-h-[200px] bg-black/5 overflow-hidden">
         <img 
           src={image.src} 
           alt={image.name} 
-          className="absolute inset-0 w-full h-full object-contain p-4"
+          className="absolute inset-0 w-full h-full object-contain p-2"
         />
         
         {/* Overlay Actions */}
