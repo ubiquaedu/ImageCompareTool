@@ -48,7 +48,12 @@ export function ComparisonView({ group, onToggleMark, onToggleMarkAll }: Compari
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+      <div 
+        className="grid gap-4" 
+        style={{ 
+          gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 350px), 1fr))` 
+        }}
+      >
         {group.images.map((img) => (
           <ImageCard 
             key={img.id} 
@@ -90,7 +95,7 @@ function ImageCard({
       )}
     >
       {/* Image Container */}
-      <div className="relative flex-1 min-h-[200px] bg-black/5 overflow-hidden">
+      <div className="relative flex-1 min-h-[350px] bg-black/5 overflow-hidden">
         <img 
           src={image.src} 
           alt={image.name} 
