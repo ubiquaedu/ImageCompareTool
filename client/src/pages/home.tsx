@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import { computeImageHash, calculateSimilarity } from "@/lib/image-processing";
 
@@ -250,11 +251,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex overflow-hidden">
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Header */}
-        <header className="h-16 border-b flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm z-10">
+    <div className="min-h-screen bg-background text-foreground h-screen overflow-hidden">
+      <PanelGroup direction="horizontal">
+        {/* Main Content Area */}
+        <Panel defaultSize={75} minSize={40} className="flex flex-col h-full overflow-hidden">
+          {/* Header */}
+          <header className="h-16 border-b flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm z-10 shrink-0">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-foreground">
@@ -299,8 +301,8 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Comparison Stage */}
-        <main className="flex-1 p-6 overflow-hidden flex flex-col">
+          {/* Comparison Stage */}
+          <main className="flex-1 p-6 overflow-hidden flex flex-col min-h-0">
             <AnimatePresence mode="wait">
                 {currentGroup ? (
                     <motion.div
@@ -323,19 +325,24 @@ export default function Home() {
                     </div>
                 )}
             </AnimatePresence>
-        </main>
-      </div>
+          </main>
+        </Panel>
 
-      {/* Sidebar Controls */}
-      <SimilarityControls 
-        threshold={threshold}
-        setThreshold={setThreshold}
-        onDeleteExact={handleDeleteExact}
-        onDeleteLowSimilarity={handleDeleteLowSimilarity}
-        onRescan={handleRescan}
-        onFilesSelected={handleFilesSelected}
-        scanSummary={scanSummary}
-      />
+        <PanelResizeHandle className="w-1.5 bg-border/50 hover:bg-primary/50 transition-colors" />
+
+        {/* Sidebar Controls */}
+        <Panel defaultSize={25} minSize={20} maxSize={40} className="h-full">
+          <SimilarityControls 
+            threshold={threshold}
+            setThreshold={setThreshold}
+            onDeleteExact={handleDeleteExact}
+            onDeleteLowSimilarity={handleDeleteLowSimilarity}
+            onRescan={handleRescan}
+            onFilesSelected={handleFilesSelected}
+            scanSummary={scanSummary}
+          />
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }

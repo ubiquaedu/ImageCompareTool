@@ -55,7 +55,7 @@ export function SimilarityControls({
   };
 
   return (
-    <div className="w-80 border-l bg-sidebar/50 backdrop-blur-xl p-6 flex flex-col gap-6 h-full overflow-y-auto">
+    <div className="w-full border-l bg-sidebar/50 backdrop-blur-xl p-6 flex flex-col gap-6 h-full overflow-y-auto">
       
       {/* Source Selection */}
       <div>
