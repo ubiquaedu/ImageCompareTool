@@ -280,7 +280,7 @@ export default function Home() {
 
           {/* Comparison Stage */}
           <main className="flex-1 p-6 overflow-y-auto bg-muted/10 min-h-0">
-            <div className="max-w-5xl mx-auto flex flex-col gap-10 pb-12">
+            <div className="w-full flex flex-col gap-10 pb-12">
               <AnimatePresence>
                   {groups.length > 0 ? (
                       groups.map(group => (
