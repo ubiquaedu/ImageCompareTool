@@ -26,7 +26,7 @@ export default function Home() {
   
   const currentGroup = groups[currentIndex];
 
-  // Cleanup object URLs when component unmounts or data changes
+  // Cleanup object URLs ONLY when component unmounts (not when allGroups changes!)
   useEffect(() => {
     return () => {
       if (isRealData) {
@@ -39,7 +39,7 @@ export default function Home() {
         });
       }
     };
-  }, [allGroups, isRealData]);
+  }, []); // Empty dependency array prevents premature cleanup during state updates
 
   const handleFilesSelected = async (fileList: FileList) => {
     toast({
