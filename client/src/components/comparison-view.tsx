@@ -95,23 +95,23 @@ function ImageCard({
           </div>
           
           <Button
-            variant={isMarked ? "destructive" : "outline"}
+            variant={isMarked ? "secondary" : "outline"}
             size="sm"
             className={cn(
               "shrink-0 transition-all",
-              isMarked ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "hover:border-destructive hover:text-destructive"
+              isMarked ? "bg-muted text-foreground hover:bg-muted/80" : "hover:border-destructive hover:text-destructive text-destructive border-destructive/20"
             )}
             onClick={onToggle}
           >
             {isMarked ? (
               <>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                <Check className="h-4 w-4 mr-2" />
+                Keep
               </>
             ) : (
               <>
-                <Check className="h-4 w-4 mr-2" />
-                Keep
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
               </>
             )}
           </Button>
