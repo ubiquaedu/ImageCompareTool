@@ -21,6 +21,11 @@ interface SimilarityControlsProps {
   onDeleteLowSimilarity: () => void;
   onRescan: () => void;
   onFilesSelected: (files: FileList) => void;
+  scanSummary: {
+    groupsFound: number;
+    wastedSpaceMB: number;
+    duplicatesCount: number;
+  };
 }
 
 export function SimilarityControls({
@@ -29,7 +34,8 @@ export function SimilarityControls({
   onDeleteExact,
   onDeleteLowSimilarity,
   onRescan,
-  onFilesSelected
+  onFilesSelected,
+  scanSummary
 }: SimilarityControlsProps) {
   const [selectedPath, setSelectedPath] = useState<string>("");
   const [fileCount, setFileCount] = useState<number>(0);
@@ -191,17 +197,17 @@ export function SimilarityControls({
             </div>
             <div>
               <div className="text-sm font-medium">Scan Summary</div>
-              <div className="text-xs text-muted-foreground">3 groups found</div>
+              <div className="text-xs text-muted-foreground">{scanSummary.groupsFound} groups found</div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
              <div className="bg-muted/50 p-2 rounded">
                 <span className="block text-muted-foreground">Wasted Space</span>
-                <span className="font-mono font-medium">24.5 MB</span>
+                <span className="font-mono font-medium">{scanSummary.wastedSpaceMB.toFixed(2)} MB</span>
              </div>
              <div className="bg-muted/50 p-2 rounded">
                 <span className="block text-muted-foreground">Duplicates</span>
-                <span className="font-mono font-medium">3 Files</span>
+                <span className="font-mono font-medium">{scanSummary.duplicatesCount} Files</span>
              </div>
           </div>
         </div>

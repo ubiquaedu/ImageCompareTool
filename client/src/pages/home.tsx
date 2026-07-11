@@ -230,6 +230,25 @@ export default function Home() {
     });
   };
 
+  const scanSummary = {
+    groupsFound: groups.length,
+    wastedSpaceMB: groups.reduce((acc, group) => {
+      // Calculate wasted space: sum of all images in group minus the largest one (assuming keeping one)
+      if (group.images.length <= 1) return acc;
+      
+      const sizes = group.images.map(img => {
+        const sizeStr = img.size.replace(' MB', '');
+        return parseFloat(sizeStr) || 0;
+      });
+      
+      const totalSize = sizes.reduce((sum, size) => sum + size, 0);
+      const maxSize = Math.max(...sizes);
+      
+      return acc + (totalSize - maxSize);
+    }, 0),
+    duplicatesCount: groups.reduce((acc, group) => acc + Math.max(0, group.images.length - 1), 0)
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground flex overflow-hidden">
       {/* Main Content Area */}
@@ -315,6 +334,7 @@ export default function Home() {
         onDeleteLowSimilarity={handleDeleteLowSimilarity}
         onRescan={handleRescan}
         onFilesSelected={handleFilesSelected}
+        scanSummary={scanSummary}
       />
     </div>
   );
