@@ -84,8 +84,8 @@ function ImageCard({
 
       {/* Details Footer */}
       <div className="p-4 bg-card border-t flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-2">
-          <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <h3 className="font-medium text-sm truncate" title={image.name}>{image.name}</h3>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
               <span>{image.resolution}</span>
