@@ -57,6 +57,17 @@ function ImageCard({
   isMarked?: boolean; 
   onToggle: () => void; 
 }) {
+  // Extract file extension to display prominently
+  const getExtension = (filename: string) => {
+    const parts = filename.split('.');
+    if (parts.length > 1) {
+      return parts[parts.length - 1].toUpperCase();
+    }
+    return 'FILE';
+  };
+  
+  const ext = getExtension(image.name);
+
   return (
     <div 
       className={cn(
@@ -94,27 +105,32 @@ function ImageCard({
             </div>
           </div>
           
-          <Button
-            variant={isMarked ? "secondary" : "outline"}
-            size="sm"
-            className={cn(
-              "shrink-0 transition-all",
-              isMarked ? "bg-muted text-foreground hover:bg-muted/80" : "hover:border-destructive hover:text-destructive text-destructive border-destructive/20"
-            )}
-            onClick={onToggle}
-          >
-            {isMarked ? (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Keep
-              </>
-            ) : (
-              <>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant="outline" className="font-mono bg-muted/30">
+              {ext}
+            </Badge>
+            <Button
+              variant={isMarked ? "secondary" : "outline"}
+              size="sm"
+              className={cn(
+                "transition-all",
+                isMarked ? "bg-muted text-foreground hover:bg-muted/80" : "hover:border-destructive hover:text-destructive text-destructive border-destructive/20"
+              )}
+              onClick={onToggle}
+            >
+              {isMarked ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Keep
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         
         <div className="text-xs text-muted-foreground font-mono bg-muted/50 p-2 rounded">
