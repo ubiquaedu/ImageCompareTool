@@ -8,11 +8,14 @@ import { motion } from "framer-motion";
 interface ComparisonViewProps {
   group: DuplicateGroup;
   onToggleMark: (imageId: string) => void;
+  onToggleMarkAll?: (markAll: boolean) => void;
 }
 
-export function ComparisonView({ group, onToggleMark }: ComparisonViewProps) {
+export function ComparisonView({ group, onToggleMark, onToggleMarkAll }: ComparisonViewProps) {
+  const allMarked = group.images.every(img => img.isMarkedForDeletion);
+  
   return (
-    <div className="w-full h-full flex flex-col gap-4">
+    <div className="w-full flex flex-col gap-4">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-3">
           <Badge 
@@ -29,12 +32,23 @@ export function ComparisonView({ group, onToggleMark }: ComparisonViewProps) {
           <span className="text-muted-foreground text-sm font-mono">Group ID: {group.id}</span>
         </div>
         <div className="flex gap-2">
+            {onToggleMarkAll && (
+              <Button 
+                variant={allMarked ? "default" : "outline"} 
+                size="sm" 
+                className="gap-2"
+                onClick={() => onToggleMarkAll(!allMarked)}
+              >
+                <Check className="h-4 w-4" />
+                {allMarked ? "Keep All" : "Mark All"}
+              </Button>
+            )}
             <Button variant="outline" size="icon" className="h-8 w-8"><ZoomIn className="h-4 w-4" /></Button>
             <Button variant="outline" size="icon" className="h-8 w-8"><ZoomOut className="h-4 w-4" /></Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-2 gap-4">
         {group.images.map((img) => (
           <ImageCard 
             key={img.id} 

@@ -3,7 +3,7 @@ import { MOCK_GROUPS, DuplicateGroup, ImageFile } from "@/lib/mock-data";
 import { ComparisonView } from "@/components/comparison-view";
 import { SimilarityControls } from "@/components/similarity-controls";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
@@ -13,19 +13,11 @@ import { computeImageHash, calculateSimilarity } from "@/lib/image-processing";
 export default function Home() {
   const [allGroups, setAllGroups] = useState<DuplicateGroup[]>(MOCK_GROUPS);
   const [isRealData, setIsRealData] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [threshold, setThreshold] = useState(90);
   const { toast } = useToast();
 
   // Filter groups based on threshold
   const groups = allGroups.filter(g => g.similarity >= threshold);
-  
-  // If current index is out of bounds after filtering, reset it
-  if (currentIndex >= groups.length && groups.length > 0) {
-      setCurrentIndex(0);
-  }
-  
-  const currentGroup = groups[currentIndex];
 
   // Cleanup object URLs ONLY when component unmounts (not when allGroups changes!)
   useEffect(() => {
@@ -158,10 +150,10 @@ export default function Home() {
     }
   };
 
-  const handleToggleMark = (imageId: string) => {
+  const handleToggleMark = (groupId: string, imageId: string) => {
     setAllGroups(prevGroups => {
       return prevGroups.map(group => {
-        if (group.id === currentGroup.id) {
+        if (group.id === groupId) {
           return {
             ...group,
             images: group.images.map(img => 
@@ -176,12 +168,18 @@ export default function Home() {
     });
   };
 
-  const nextGroup = () => {
-    if (currentIndex < groups.length - 1) setCurrentIndex(c => c + 1);
-  };
-
-  const prevGroup = () => {
-    if (currentIndex > 0) setCurrentIndex(c => c - 1);
+  const handleToggleMarkGroup = (groupId: string, markAll: boolean) => {
+    setAllGroups(prevGroups => {
+      return prevGroups.map(group => {
+        if (group.id === groupId) {
+          return {
+            ...group,
+            images: group.images.map(img => ({ ...img, isMarkedForDeletion: markAll })) as [any, any]
+          };
+        }
+        return group;
+      });
+    });
   };
 
   const handleDeleteExact = () => {
@@ -204,24 +202,24 @@ export default function Home() {
   };
 
   const handleSave = () => {
-    const markedCount = currentGroup.images.filter(i => i.isMarkedForDeletion).length;
+    const markedCount = groups.reduce((total, group) => {
+      return total + group.images.filter(i => i.isMarkedForDeletion).length;
+    }, 0);
+
     if (markedCount === 0) {
         toast({
             title: "No Action Taken",
-            description: "Please mark at least one image to delete.",
+            description: "Please mark at least one image to delete across all groups.",
             variant: "destructive"
         });
         return;
     }
     
     toast({
-        title: "Changes Applied",
-        description: `Deleted ${markedCount} image(s) from this group.`,
+        title: "Bulk Changes Applied",
+        description: `Deleted ${markedCount} image(s) across ${groups.length} groups.`,
     });
-    // Simulate moving to next
-    if (currentIndex < groups.length - 1) {
-        setTimeout(nextGroup, 500);
-    }
+    // In a real desktop app this is where we'd do the physical deletion
   };
 
   const handleRescan = () => {
@@ -270,61 +268,45 @@ export default function Home() {
 
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground font-mono">
-              Group {currentIndex + 1} of {groups.length}
-            </div>
-            <div className="flex items-center border rounded-md bg-background">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={prevGroup} 
-                disabled={currentIndex === 0}
-                className="rounded-r-none"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="w-px h-4 bg-border"></div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={nextGroup} 
-                disabled={currentIndex === groups.length - 1}
-                className="rounded-l-none"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              Reviewing {groups.length} duplicate groups
             </div>
             
             <Button onClick={handleSave} className="gap-2 shadow-lg shadow-primary/20">
                 <Save className="h-4 w-4" />
-                Apply Changes
+                Apply All Changes
             </Button>
           </div>
         </header>
 
           {/* Comparison Stage */}
-          <main className="flex-1 p-6 overflow-hidden flex flex-col min-h-0">
-            <AnimatePresence mode="wait">
-                {currentGroup ? (
-                    <motion.div
-                        key={currentGroup.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="h-full"
-                    >
-                        <ComparisonView 
-                            group={currentGroup} 
-                            onToggleMark={handleToggleMark} 
-                        />
-                    </motion.div>
-                ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                        <p className="text-lg font-medium">No matches found</p>
-                        <p className="text-sm">Try lowering the similarity threshold</p>
-                    </div>
-                )}
-            </AnimatePresence>
+          <main className="flex-1 p-6 overflow-y-auto bg-muted/10 min-h-0">
+            <div className="max-w-5xl mx-auto flex flex-col gap-10 pb-12">
+              <AnimatePresence>
+                  {groups.length > 0 ? (
+                      groups.map(group => (
+                          <motion.div
+                              key={group.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.2 }}
+                              className="bg-card rounded-2xl border shadow-sm p-4 overflow-hidden"
+                          >
+                              <ComparisonView 
+                                  group={group} 
+                                  onToggleMark={(imageId) => handleToggleMark(group.id, imageId)} 
+                                  onToggleMarkAll={(markAll) => handleToggleMarkGroup(group.id, markAll)}
+                              />
+                          </motion.div>
+                      ))
+                  ) : (
+                      <div className="py-32 flex flex-col items-center justify-center text-muted-foreground bg-card/50 rounded-2xl border border-dashed">
+                          <p className="text-xl font-medium text-foreground">No matches found</p>
+                          <p className="text-sm mt-1">Try lowering the similarity threshold</p>
+                      </div>
+                  )}
+              </AnimatePresence>
+            </div>
           </main>
         </Panel>
 
