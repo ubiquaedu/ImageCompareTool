@@ -8,7 +8,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'electron-preload.js'),
+      preload: path.join(__dirname, 'electron-preload.cjs'),
       nodeIntegration: false, // Security best practice
       contextIsolation: true  // Security best practice
     },
@@ -17,10 +17,10 @@ function createWindow() {
 
   // In development, load the local server. In production, load the built file.
   // For simplicity in this guide, we'll assume serving the built static files.
-  // win.loadFile('dist/public/index.html'); 
+  // win.loadFile(path.join(__dirname, 'dist', 'public', 'index.html')); 
   
   // OR for dev mode (if you run 'npm run dev' separately):
-  win.loadFile('dist/public/index.html');
+  win.loadFile(path.join(__dirname, 'dist', 'public', 'index.html'));
 
   // Open links in external browser
   win.webContents.setWindowOpenHandler(({ url }) => {
