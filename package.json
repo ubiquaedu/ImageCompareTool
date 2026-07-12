@@ -4,6 +4,7 @@
   "description": "ImageDiff Pro - A fast and professional tool to find and delete duplicate and similar images locally on your PC.",
   "author": "ImageDiff Pro",
   "type": "module",
+  "main": "electron-main.cjs",
   "license": "MIT",
   "build": {
     "appId": "com.imagediffpro.app",
