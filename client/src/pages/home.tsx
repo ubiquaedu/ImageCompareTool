@@ -130,7 +130,6 @@ export default function Home() {
         
         setAllGroups(newGroups);
         setIsRealData(true);
-        setCurrentIndex(0);
         toast({
           title: "Analysis Complete",
           description: `Found ${newGroups.length} similar pairs using perceptual hashing.`,
