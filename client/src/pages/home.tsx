@@ -105,6 +105,8 @@ export default function Home() {
                 size: `${(file1.size / 1024 / 1024).toFixed(2)} MB`,
                 resolution: "Unknown",
                 date: new Date(file1.lastModified).toLocaleString(),
+                // file.path is exposed by Electron; undefined in a plain browser
+                filePath: (file1 as any).path || undefined,
               },
               {
                 id: `img-${bestMatchIndex}`,
@@ -113,6 +115,7 @@ export default function Home() {
                 size: `${(file2.size / 1024 / 1024).toFixed(2)} MB`,
                 resolution: "Unknown",
                 date: new Date(file2.lastModified).toLocaleString(),
+                filePath: (file2 as any).path || undefined,
               }
             ]
            });
@@ -201,25 +204,70 @@ export default function Home() {
     });
   };
 
-  const handleSave = () => {
-    const markedCount = groups.reduce((total, group) => {
-      return total + group.images.filter(i => i.isMarkedForDeletion).length;
-    }, 0);
+  const handleSave = async () => {
+    const markedImages = groups.flatMap(group =>
+      group.images.filter(i => i.isMarkedForDeletion)
+    );
 
-    if (markedCount === 0) {
-        toast({
-            title: "No Action Taken",
-            description: "Please mark at least one image to delete across all groups.",
-            variant: "destructive"
-        });
-        return;
+    if (markedImages.length === 0) {
+      toast({
+        title: "No Action Taken",
+        description: "Please mark at least one image to delete across all groups.",
+        variant: "destructive"
+      });
+      return;
     }
-    
-    toast({
-        title: "Bulk Changes Applied",
-        description: `Deleted ${markedCount} image(s) across ${groups.length} groups.`,
-    });
-    // In a real desktop app this is where we'd do the physical deletion
+
+    const electronAPI = (window as any).electronAPI;
+
+    if (electronAPI) {
+      // Running inside Electron — actually delete files from disk
+      let deletedCount = 0;
+      const errors: string[] = [];
+
+      for (const img of markedImages) {
+        if (!img.filePath) {
+          errors.push(`${img.name}: no path available`);
+          continue;
+        }
+        const result = await electronAPI.deleteFile(img.filePath);
+        if (result.success) {
+          deletedCount++;
+        } else {
+          errors.push(`${img.name}: ${result.error}`);
+        }
+      }
+
+      // Remove deleted images from UI state
+      setAllGroups(prevGroups =>
+        prevGroups
+          .map(group => ({
+            ...group,
+            images: group.images.filter(img => !img.isMarkedForDeletion) as [any, any]
+          }))
+          .filter(group => group.images.length >= 2)
+      );
+
+      if (errors.length > 0) {
+        toast({
+          title: `Deleted ${deletedCount} of ${markedImages.length} file(s)`,
+          description: `Errors: ${errors.join('; ')}`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Files Deleted",
+          description: `${deletedCount} file(s) permanently deleted from disk.`,
+        });
+      }
+    } else {
+      // Running in a plain browser — can't touch the filesystem
+      toast({
+        title: "Browser Limitation",
+        description: "Web apps cannot delete files from disk. Run the desktop app (.exe) to enable deletion.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleRescan = () => {

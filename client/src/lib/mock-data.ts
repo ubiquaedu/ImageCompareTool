@@ -11,6 +11,8 @@ export interface ImageFile {
   resolution: string;
   date: string;
   isMarkedForDeletion?: boolean;
+  /** Real absolute path on disk — available only when running inside Electron */
+  filePath?: string;
 }
 
 export interface DuplicateGroup {

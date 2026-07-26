@@ -9,20 +9,14 @@ function createWindow() {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'electron-preload.cjs'),
-      nodeIntegration: false, // Security best practice
-      contextIsolation: true  // Security best practice
+      nodeIntegration: false,
+      contextIsolation: true
     },
     autoHideMenuBar: true
   });
 
-  // In development, load the local server. In production, load the built file.
-  // For simplicity in this guide, we'll assume serving the built static files.
-  // win.loadFile(path.join(__dirname, 'dist', 'public', 'index.html')); 
-  
-  // OR for dev mode (if you run 'npm run dev' separately):
   win.loadFile(path.join(__dirname, 'dist', 'public', 'index.html'));
 
-  // Open links in external browser
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
@@ -45,48 +39,83 @@ app.on('window-all-closed', () => {
   }
 });
 
-// --- THE "MAGIC" PART: File System Operations ---
+// --- File System Operations ---
 
-// Listen for the 'delete-file' command from the frontend
+// Delete a single file from disk
 ipcMain.handle('delete-file', async (event, filePath) => {
   try {
-    // Security check: Ensure we are not deleting system files (basic check)
-    // In a real app, you'd want more robust validation.
-    console.log('Attempting to delete:', filePath);
-    
-    // Convert file:// URL to path if necessary, or assume it's a path
-    // Note: The web app uses Blob URLs currently. For this to work, 
-    // the web app needs to pass the REAL file path, which browsers hide.
-    // 
-    // CRITICAL NOTE: Standard web <input type="file"> DOES NOT give the full path.
-    // In Electron, you must use the Electron dialog to select files to get full paths.
-    
-    // For this example to work, we'd need to change the file selection to use 
-    // window.electron.selectFolder() instead of <input type="file">
-    
-    return { success: true }; 
+    if (!filePath || typeof filePath !== 'string') {
+      return { success: false, error: 'Invalid file path' };
+    }
+    // Basic safety check: must be an absolute path
+    if (!path.isAbsolute(filePath)) {
+      return { success: false, error: 'Only absolute paths are allowed' };
+    }
+    fs.unlinkSync(filePath);
+    console.log('Deleted:', filePath);
+    return { success: true };
   } catch (error) {
-    console.error('Delete failed:', error);
+    console.error('Delete failed:', filePath, error.message);
     return { success: false, error: error.message };
   }
 });
 
+// Open a native folder picker dialog
 ipcMain.handle('select-folder', async () => {
   const { dialog } = require('electron');
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory']
   });
-  
   if (result.canceled) return null;
-  return result.filePaths[0]; // Returns the full path C:\Users\Example...
+  return result.filePaths[0];
 });
 
+// Recursively scan a directory for image files
 ipcMain.handle('scan-directory', async (event, folderPath) => {
-  // This is where you'd implement the recursive file scanning using 'fs'
-  // and send the list of image files (with full paths) back to the frontend.
-  // This allows the frontend to have the real paths needed for deletion.
-  
+  const imageExtensions = new Set([
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp',
+    '.webp', '.tiff', '.tif', '.heic', '.heif',
+    '.raw', '.cr2', '.cr3', '.nef', '.arw', '.dng',
+    '.orf', '.rw2', '.pef', '.srw', '.x3f'
+  ]);
+
   const files = [];
-  // ... implementation of directory scanning ...
-  return files;
+
+  function scanDir(dirPath) {
+    let entries;
+    try {
+      entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    } catch (e) {
+      return; // Skip directories we can't read
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue; // Skip hidden files
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        scanDir(fullPath);
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (imageExtensions.has(ext)) {
+          try {
+            const stat = fs.statSync(fullPath);
+            files.push({
+              name: entry.name,
+              filePath: fullPath,
+              size: stat.size,
+              lastModified: stat.mtime.getTime()
+            });
+          } catch (e) {
+            // Skip files we can't stat
+          }
+        }
+      }
+    }
+  }
+
+  try {
+    scanDir(folderPath);
+    return { files };
+  } catch (error) {
+    return { error: error.message };
+  }
 });
