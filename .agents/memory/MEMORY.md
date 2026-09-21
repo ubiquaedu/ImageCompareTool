@@ -1,0 +1,1 @@
+- [Portable npm lockfiles](npm-portable-lockfile.md) — Replit’s internal package URLs must not be shipped to local Windows builds.
