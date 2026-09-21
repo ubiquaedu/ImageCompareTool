@@ -15,7 +15,23 @@ function createWindow() {
     autoHideMenuBar: true
   });
 
-  win.loadFile(path.join(__dirname, 'dist', 'public', 'index.html'));
+  const indexPath = path.join(app.getAppPath(), 'dist', 'public', 'index.html');
+
+  if (!fs.existsSync(indexPath)) {
+    const message = `Application files not found:\n${indexPath}`;
+    console.error(message);
+    win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+      <html><body style="font-family: sans-serif; padding: 24px">
+        <h2>ImageDiff Pro non può essere avviato</h2>
+        <p>${message}</p>
+        <p>Ricrea l'installer con <code>npm run dist</code>.</p>
+      </body></html>
+    `)}`);
+  } else {
+    win.loadFile(indexPath).catch((error) => {
+      console.error('Unable to load application:', error);
+    });
+  }
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
