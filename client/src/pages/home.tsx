@@ -103,6 +103,7 @@ export default function Home() {
                 src: URL.createObjectURL(file1),
                 name: file1.name,
                 size: `${(file1.size / 1024 / 1024).toFixed(2)} MB`,
+                fileSizeBytes: file1.size,
                 resolution: "Unknown",
                 date: new Date(file1.lastModified).toLocaleString(),
                 // file.path is exposed by Electron; undefined in a plain browser
@@ -113,6 +114,7 @@ export default function Home() {
                 src: URL.createObjectURL(file2),
                 name: file2.name,
                 size: `${(file2.size / 1024 / 1024).toFixed(2)} MB`,
+                fileSizeBytes: file2.size,
                 resolution: "Unknown",
                 date: new Date(file2.lastModified).toLocaleString(),
                 filePath: (file2 as any).path || undefined,
@@ -184,27 +186,71 @@ export default function Home() {
     });
   };
 
-  const handleDeleteExact = () => {
-    // Explanation for the user: Browsers cannot delete files from disk
-    toast({
-      title: "Browser Limitation",
-      description: "Web apps cannot delete files from your hard drive directly due to security sandboxing.",
-      variant: "destructive"
-    });
-    
-    // In a real desktop app (Electron/Tauri), we would call:
-    // await window.api.deleteFiles(exactDuplicates);
+  const getFileSizeBytes = (image: ImageFile) => {
+    if (typeof image.fileSizeBytes === "number") return image.fileSizeBytes;
+    const sizeInMb = Number.parseFloat(image.size);
+    return Number.isFinite(sizeInMb) ? sizeInMb * 1024 * 1024 : 0;
   };
 
-  const handleDeleteLowSimilarity = () => {
+  const markSmallerFiles = (eligibleGroups: DuplicateGroup[], label: string) => {
+    if (eligibleGroups.length === 0) {
+      toast({
+        title: "No Matching Pairs",
+        description: label,
+      });
+      return;
+    }
+
+    const eligibleGroupIds = new Set(eligibleGroups.map(group => group.id));
+    const equalSizeCount = eligibleGroups.filter(group =>
+      getFileSizeBytes(group.images[0]) === getFileSizeBytes(group.images[1])
+    ).length;
+
+    setAllGroups(prevGroups => prevGroups.map(group => {
+      if (!eligibleGroupIds.has(group.id)) return group;
+
+      const [first, second] = group.images;
+      // If sizes tie, mark the second file as a review candidate.
+      const candidateId =
+        getFileSizeBytes(first) < getFileSizeBytes(second) ? first.id : second.id;
+
+      return {
+        ...group,
+        images: group.images.map(image =>
+          image.id === candidateId
+            ? { ...image, isMarkedForDeletion: true }
+            : image
+        ) as [ImageFile, ImageFile]
+      };
+    }));
+
+    const tieNote = equalSizeCount > 0
+      ? ` In ${equalSizeCount} pair(s) with equal sizes, the second file was marked.`
+      : "";
     toast({
-      title: "Filtering Images",
-      description: `Marking images with similarity < ${threshold}% for review...`,
+      title: "Candidates Marked for Review",
+      description: `Marked the smaller file in ${eligibleGroups.length} pair(s). Review the selections, then use Apply All Changes to delete them.${tieNote}`,
     });
+  };
+
+  const handleMarkExactDuplicates = () => {
+    const exactGroups = allGroups.filter(group => group.similarity === 100);
+    markSmallerFiles(
+      exactGroups,
+      "No pairs have 100% visual similarity."
+    );
+  };
+
+  const handleMarkThresholdCandidates = () => {
+    const matchingGroups = allGroups.filter(group => group.similarity >= threshold);
+    markSmallerFiles(
+      matchingGroups,
+      `No pairs meet the selected threshold of ${threshold}%.`
+    );
   };
 
   const handleSave = async () => {
-    const markedImages = groups.flatMap(group =>
+    const markedImages = allGroups.flatMap(group =>
       group.images.filter(i => i.isMarkedForDeletion)
     );
 
@@ -223,26 +269,32 @@ export default function Home() {
       // Running inside Electron — actually delete files from disk
       let deletedCount = 0;
       const errors: string[] = [];
+      const deletedImageIds = new Set<string>();
 
       for (const img of markedImages) {
         if (!img.filePath) {
           errors.push(`${img.name}: no path available`);
           continue;
         }
-        const result = await electronAPI.deleteFile(img.filePath);
-        if (result.success) {
-          deletedCount++;
-        } else {
-          errors.push(`${img.name}: ${result.error}`);
+        try {
+          const result = await electronAPI.deleteFile(img.filePath);
+          if (result.success) {
+            deletedCount++;
+            deletedImageIds.add(img.id);
+          } else {
+            errors.push(`${img.name}: ${result.error}`);
+          }
+        } catch (error) {
+          errors.push(`${img.name}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
-      // Remove deleted images from UI state
+      // Remove only files confirmed deleted; retain failures for review/retry.
       setAllGroups(prevGroups =>
         prevGroups
           .map(group => ({
             ...group,
-            images: group.images.filter(img => !img.isMarkedForDeletion) as [any, any]
+            images: group.images.filter(img => !deletedImageIds.has(img.id)) as [any, any]
           }))
           .filter(group => group.images.length >= 2)
       );
@@ -364,8 +416,8 @@ export default function Home() {
           <SimilarityControls 
             threshold={threshold}
             setThreshold={setThreshold}
-            onDeleteExact={handleDeleteExact}
-            onDeleteLowSimilarity={handleDeleteLowSimilarity}
+            onMarkExactDuplicates={handleMarkExactDuplicates}
+            onMarkThresholdCandidates={handleMarkThresholdCandidates}
             onRescan={handleRescan}
             onFilesSelected={handleFilesSelected}
             scanSummary={scanSummary}

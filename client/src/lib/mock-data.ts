@@ -13,6 +13,8 @@ export interface ImageFile {
   isMarkedForDeletion?: boolean;
   /** Real absolute path on disk — available only when running inside Electron */
   filePath?: string;
+  /** Exact file size in bytes, used to choose the smaller file in a pair */
+  fileSizeBytes?: number;
 }
 
 export interface DuplicateGroup {

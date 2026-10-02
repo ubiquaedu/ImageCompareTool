@@ -17,8 +17,8 @@ import { Separator } from "@/components/ui/separator";
 interface SimilarityControlsProps {
   threshold: number;
   setThreshold: (val: number) => void;
-  onDeleteExact: () => void;
-  onDeleteLowSimilarity: () => void;
+  onMarkExactDuplicates: () => void;
+  onMarkThresholdCandidates: () => void;
   onRescan: () => void;
   onFilesSelected: (files: FileList) => void;
   scanSummary: {
@@ -31,8 +31,8 @@ interface SimilarityControlsProps {
 export function SimilarityControls({
   threshold,
   setThreshold,
-  onDeleteExact,
-  onDeleteLowSimilarity,
+  onMarkExactDuplicates,
+  onMarkThresholdCandidates,
   onRescan,
   onFilesSelected,
   scanSummary
@@ -158,20 +158,23 @@ export function SimilarityControls({
           <Button 
             variant="outline" 
             className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
-            onClick={onDeleteExact}
+            onClick={onMarkExactDuplicates}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete Exact Duplicates (100%)
+            Mark Smaller Copy (100%)
           </Button>
 
           <Button 
             variant="outline" 
             className="w-full justify-start"
-            onClick={onDeleteLowSimilarity}
+            onClick={onMarkThresholdCandidates}
           >
             <Filter className="h-4 w-4 mr-2" />
-            Delete Matches &lt; {threshold}%
+            Mark Smaller Copies ≥ {threshold}%
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Marks one candidate per matching pair for review. Similarity is visual; 100% does not guarantee byte-identical files.
+          </p>
         </div>
 
         <Separator />
