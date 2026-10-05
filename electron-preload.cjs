@@ -1,6 +1,9 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Electron 32+ no longer reliably exposes File.path; use webUtils instead.
+  getPathForFile: (file) => webUtils.getPathForFile(file),
+
   // Allow frontend to ask backend to select a folder
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   

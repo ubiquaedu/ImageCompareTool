@@ -52,18 +52,34 @@ export default function Home() {
     }
 
     try {
+      const electronAPI = (window as Window & {
+        electronAPI?: { getPathForFile?: (file: File) => string };
+      }).electronAPI;
+
       // 1. Compute hashes for all images
       const hashedImages = await Promise.all(files.map(async (file) => {
         try {
           const hash = await computeImageHash(file);
-          return { file, hash };
+          let filePath: string | undefined;
+          if (electronAPI?.getPathForFile) {
+            try {
+              filePath = electronAPI.getPathForFile(file) || undefined;
+            } catch (pathError) {
+              console.error("Failed to retrieve file path:", file.name, pathError);
+            }
+          }
+          return { file, hash, filePath };
         } catch (e) {
           console.error("Failed to hash image:", file.name);
           return null;
         }
       }));
 
-      const validImages = hashedImages.filter(item => item !== null) as { file: File, hash: string }[];
+      const validImages = hashedImages.filter(item => item !== null) as {
+        file: File;
+        hash: string;
+        filePath?: string;
+      }[];
       
       // 2. Compare all pairs (O(n^2) - simple implementation for demo)
       const newGroups: DuplicateGroup[] = [];
@@ -91,8 +107,10 @@ export default function Home() {
            usedIndices.add(i);
            usedIndices.add(bestMatchIndex);
 
-           const file1 = validImages[i].file;
-           const file2 = validImages[bestMatchIndex].file;
+            const image1 = validImages[i];
+            const image2 = validImages[bestMatchIndex];
+            const file1 = image1.file;
+            const file2 = image2.file;
 
            newGroups.push({
             id: `group-${i}-${bestMatchIndex}`,
@@ -106,8 +124,7 @@ export default function Home() {
                 fileSizeBytes: file1.size,
                 resolution: "Unknown",
                 date: new Date(file1.lastModified).toLocaleString(),
-                // file.path is exposed by Electron; undefined in a plain browser
-                filePath: (file1 as any).path || undefined,
+                filePath: image1.filePath,
               },
               {
                 id: `img-${bestMatchIndex}`,
@@ -117,7 +134,7 @@ export default function Home() {
                 fileSizeBytes: file2.size,
                 resolution: "Unknown",
                 date: new Date(file2.lastModified).toLocaleString(),
-                filePath: (file2 as any).path || undefined,
+                filePath: image2.filePath,
               }
             ]
            });
@@ -132,9 +149,16 @@ export default function Home() {
         
         setAllGroups(newGroups);
         setIsRealData(true);
+        const missingPathCount = newGroups
+          .flatMap(group => group.images)
+          .filter(image => !image.filePath).length;
+        const pathWarning = electronAPI && missingPathCount > 0
+          ? ` ${missingPathCount} matched file(s) have no disk path and cannot be deleted.`
+          : "";
         toast({
           title: "Analysis Complete",
-          description: `Found ${newGroups.length} similar pairs using perceptual hashing.`,
+          description: `Found ${newGroups.length} similar pairs using perceptual hashing.${pathWarning}`,
+          variant: pathWarning ? "destructive" : "default"
         });
       } else {
         toast({
