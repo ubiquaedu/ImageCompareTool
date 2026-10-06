@@ -3,7 +3,13 @@
 
 const HAS_SIZE = 16; // 16x16 hash = 256 bits
 
-export async function computeImageHash(file: File): Promise<string> {
+export interface ComputedImageData {
+  hash: string;
+  width: number;
+  height: number;
+}
+
+export async function computeImageHash(file: File): Promise<ComputedImageData> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -11,8 +17,11 @@ export async function computeImageHash(file: File): Promise<string> {
     img.onload = () => {
       URL.revokeObjectURL(url);
       try {
-        const hash = processImage(img);
-        resolve(hash);
+        resolve({
+          hash: processImage(img),
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
       } catch (e) {
         reject(e);
       }

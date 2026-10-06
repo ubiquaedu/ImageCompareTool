@@ -11,6 +11,8 @@ interface ComparisonViewProps {
   onToggleMarkAll?: (markAll: boolean) => void;
   selectedPreviewId?: string | null;
   onSelectPreview?: (image: ImageFile) => void;
+  showResolution: boolean;
+  showFileSize: boolean;
 }
 
 export function ComparisonView({
@@ -19,6 +21,8 @@ export function ComparisonView({
   onToggleMarkAll,
   selectedPreviewId,
   onSelectPreview,
+  showResolution,
+  showFileSize,
 }: ComparisonViewProps) {
   const allMarked = group.images.every(img => img.isMarkedForDeletion);
   
@@ -68,6 +72,8 @@ export function ComparisonView({
             onToggle={() => onToggleMark(img.id)} 
             isSelected={img.id === selectedPreviewId}
             onSelect={() => onSelectPreview?.(img)}
+            showResolution={showResolution}
+            showFileSize={showFileSize}
           />
         ))}
       </div>
@@ -81,12 +87,16 @@ function ImageCard({
   onToggle,
   isSelected,
   onSelect,
+  showResolution,
+  showFileSize,
 }: { 
   image: ImageFile; 
   isMarked?: boolean; 
   onToggle: () => void; 
   isSelected?: boolean;
   onSelect: () => void;
+  showResolution: boolean;
+  showFileSize: boolean;
 }) {
   // Extract file extension to display prominently
   const getExtension = (filename: string) => {
@@ -132,11 +142,13 @@ function ImageCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h3 className="font-medium text-sm truncate" title={image.name}>{image.name}</h3>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-              <span>{image.resolution}</span>
-              <span>•</span>
-              <span>{image.size}</span>
-            </div>
+            {(showResolution || showFileSize) && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                {showResolution && <span>{image.resolution}</span>}
+                {showResolution && showFileSize && <span>•</span>}
+                {showFileSize && <span>{image.size}</span>}
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-2 shrink-0">

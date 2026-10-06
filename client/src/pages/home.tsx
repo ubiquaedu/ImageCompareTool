@@ -15,6 +15,8 @@ export default function Home() {
   const [isRealData, setIsRealData] = useState(false);
   const [threshold, setThreshold] = useState(90);
   const [selectedPreviewId, setSelectedPreviewId] = useState<string | null>(null);
+  const [showResolution, setShowResolution] = useState(true);
+  const [showFileSize, setShowFileSize] = useState(true);
   const { toast } = useToast();
 
   // Filter groups based on threshold
@@ -65,7 +67,7 @@ export default function Home() {
       // 1. Compute hashes for all images
       const hashedImages = await Promise.all(files.map(async (file) => {
         try {
-          const hash = await computeImageHash(file);
+          const { hash, width, height } = await computeImageHash(file);
           let filePath: string | undefined;
           if (electronAPI?.getPathForFile) {
             try {
@@ -74,7 +76,7 @@ export default function Home() {
               console.error("Failed to retrieve file path:", file.name, pathError);
             }
           }
-          return { file, hash, filePath };
+          return { file, hash, width, height, filePath };
         } catch (e) {
           console.error("Failed to hash image:", file.name);
           return null;
@@ -84,6 +86,8 @@ export default function Home() {
       const validImages = hashedImages.filter(item => item !== null) as {
         file: File;
         hash: string;
+        width: number;
+        height: number;
         filePath?: string;
       }[];
 
@@ -111,7 +115,7 @@ export default function Home() {
           name: item.file.name,
           size: `${(item.file.size / 1024 / 1024).toFixed(2)} MB`,
           fileSizeBytes: item.file.size,
-          resolution: "Unknown",
+          resolution: `${item.width}x${item.height}`,
           date: new Date(item.file.lastModified).toLocaleString(),
           filePath: item.filePath,
         });
@@ -406,6 +410,8 @@ export default function Home() {
                                   onToggleMarkAll={(markAll) => handleToggleMarkGroup(group.id, markAll)}
                                   selectedPreviewId={selectedPreview?.id}
                                   onSelectPreview={(image) => setSelectedPreviewId(image.id)}
+                                  showResolution={showResolution}
+                                  showFileSize={showFileSize}
                               />
                           </motion.div>
                       ))
@@ -433,6 +439,10 @@ export default function Home() {
             onFilesSelected={handleFilesSelected}
             scanSummary={scanSummary}
             selectedPreview={selectedPreview}
+            showResolution={showResolution}
+            onShowResolutionChange={setShowResolution}
+            showFileSize={showFileSize}
+            onShowFileSizeChange={setShowFileSize}
           />
         </Panel>
       </PanelGroup>

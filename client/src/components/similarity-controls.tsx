@@ -28,6 +28,10 @@ interface SimilarityControlsProps {
     duplicatesCount: number;
   };
   selectedPreview: ImageFile | null;
+  showResolution: boolean;
+  onShowResolutionChange: (show: boolean) => void;
+  showFileSize: boolean;
+  onShowFileSizeChange: (show: boolean) => void;
 }
 
 export function SimilarityControls({
@@ -39,10 +43,22 @@ export function SimilarityControls({
   onFilesSelected,
   scanSummary,
   selectedPreview,
+  showResolution,
+  onShowResolutionChange,
+  showFileSize,
+  onShowFileSizeChange,
 }: SimilarityControlsProps) {
   const [selectedPath, setSelectedPath] = useState<string>("");
   const [fileCount, setFileCount] = useState<number>(0);
+  const [previewOrientation, setPreviewOrientation] = useState<{
+    src: string;
+    isPortrait: boolean;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isPortraitPreview =
+    !!selectedPreview &&
+    previewOrientation?.src === selectedPreview.src &&
+    previewOrientation.isPortrait;
 
   const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -132,18 +148,34 @@ export function SimilarityControls({
         </div>
         {selectedPreview ? (
           <>
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-black/5">
+            <div
+              className={`relative w-full overflow-hidden rounded-lg border bg-black/5 ${
+                isPortraitPreview ? "min-h-[300px]" : "aspect-[4/3]"
+              }`}
+              style={isPortraitPreview ? { height: "min(48vh, 480px)" } : undefined}
+            >
               <img
                 src={selectedPreview.src}
                 alt={selectedPreview.name}
-                className="absolute inset-0 h-full w-full object-contain p-2"
+                className="absolute inset-0 h-full w-full object-contain p-1"
+                onLoad={(event) => {
+                  const { naturalWidth, naturalHeight } = event.currentTarget;
+                  setPreviewOrientation({
+                    src: selectedPreview.src,
+                    isPortrait: naturalHeight > naturalWidth,
+                  });
+                }}
               />
             </div>
             <div className="min-w-0 space-y-1">
               <p className="truncate text-sm font-medium" title={selectedPreview.name}>{selectedPreview.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {selectedPreview.resolution} · {selectedPreview.size}
-              </p>
+              {(showResolution || showFileSize) && (
+                <p className="truncate text-xs text-muted-foreground">
+                  {showResolution && selectedPreview.resolution}
+                  {showResolution && showFileSize && " · "}
+                  {showFileSize && selectedPreview.size}
+                </p>
+              )}
             </div>
           </>
         ) : (
@@ -220,12 +252,26 @@ export function SimilarityControls({
         <div className="space-y-4">
           <Label>Display Options</Label>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Show Resolution</span>
-            <Switch defaultChecked />
+            <Label htmlFor="show-resolution" className="text-sm font-normal text-muted-foreground">
+              Show Resolution
+            </Label>
+            <Switch
+              id="show-resolution"
+              checked={showResolution}
+              onCheckedChange={onShowResolutionChange}
+              aria-label="Show Resolution"
+            />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Show File Size</span>
-            <Switch defaultChecked />
+            <Label htmlFor="show-file-size" className="text-sm font-normal text-muted-foreground">
+              Show File Size
+            </Label>
+            <Switch
+              id="show-file-size"
+              checked={showFileSize}
+              onCheckedChange={onShowFileSizeChange}
+              aria-label="Show File Size"
+            />
           </div>
         </div>
       </div>
