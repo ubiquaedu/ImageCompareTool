@@ -8,16 +8,22 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
-import { computeImageHash, calculateSimilarity } from "@/lib/image-processing";
+import { computeImageHash, findBestSimilarityPairs } from "@/lib/image-processing";
 
 export default function Home() {
   const [allGroups, setAllGroups] = useState<DuplicateGroup[]>(MOCK_GROUPS);
   const [isRealData, setIsRealData] = useState(false);
   const [threshold, setThreshold] = useState(90);
+  const [selectedPreviewId, setSelectedPreviewId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Filter groups based on threshold
   const groups = allGroups.filter(g => g.similarity >= threshold);
+  const visibleImages = groups.flatMap(group => group.images);
+  const selectedPreview =
+    visibleImages.find(image => image.id === selectedPreviewId)
+    ?? groups[0]?.images[0]
+    ?? null;
 
   // Cleanup object URLs ONLY when component unmounts (not when allGroups changes!)
   useEffect(() => {
@@ -80,65 +86,44 @@ export default function Home() {
         hash: string;
         filePath?: string;
       }[];
-      
-      // 2. Compare all pairs (O(n^2) - simple implementation for demo)
+
+      // Keep scan and tie-break order stable, independent of the OS folder listing.
+      validImages.sort((a, b) =>
+        `${a.file.webkitRelativePath || a.file.name}\u0000${a.file.lastModified}`
+          .localeCompare(`${b.file.webkitRelativePath || b.file.name}\u0000${b.file.lastModified}`)
+      );
+
+      // 2. Compare all candidate pairs together and keep the strongest
+      // non-overlapping matches, rather than greedily pairing in file order.
+      const pairs = findBestSimilarityPairs(
+        validImages.map(item => item.hash),
+        validImages.map(item => `${item.file.webkitRelativePath || item.file.name}\u0000${item.file.lastModified}`),
+        60,
+      );
       const newGroups: DuplicateGroup[] = [];
-      const usedIndices = new Set<number>();
 
-      for (let i = 0; i < validImages.length; i++) {
-        if (usedIndices.has(i)) continue;
+      for (const pair of pairs) {
+        const first = validImages[pair.firstIndex];
+        const second = validImages[pair.secondIndex];
+        const toImageFile = (item: typeof first, index: number): ImageFile => ({
+          id: `img-${index}`,
+          src: URL.createObjectURL(item.file),
+          name: item.file.name,
+          size: `${(item.file.size / 1024 / 1024).toFixed(2)} MB`,
+          fileSizeBytes: item.file.size,
+          resolution: "Unknown",
+          date: new Date(item.file.lastModified).toLocaleString(),
+          filePath: item.filePath,
+        });
 
-        let bestMatchIndex = -1;
-        let bestSimilarity = 0;
-
-        for (let j = i + 1; j < validImages.length; j++) {
-          if (usedIndices.has(j)) continue;
-
-          const similarity = calculateSimilarity(validImages[i].hash, validImages[j].hash);
-          
-          if (similarity > bestSimilarity) {
-            bestSimilarity = similarity;
-            bestMatchIndex = j;
-          }
-        }
-
-        // Only group if similarity is reasonable (e.g. > 60%) to avoid random pairing
-        if (bestMatchIndex !== -1 && bestSimilarity >= 60) {
-           usedIndices.add(i);
-           usedIndices.add(bestMatchIndex);
-
-            const image1 = validImages[i];
-            const image2 = validImages[bestMatchIndex];
-            const file1 = image1.file;
-            const file2 = image2.file;
-
-           newGroups.push({
-            id: `group-${i}-${bestMatchIndex}`,
-            similarity: bestSimilarity,
-            images: [
-              {
-                id: `img-${i}`,
-                src: URL.createObjectURL(file1),
-                name: file1.name,
-                size: `${(file1.size / 1024 / 1024).toFixed(2)} MB`,
-                fileSizeBytes: file1.size,
-                resolution: "Unknown",
-                date: new Date(file1.lastModified).toLocaleString(),
-                filePath: image1.filePath,
-              },
-              {
-                id: `img-${bestMatchIndex}`,
-                src: URL.createObjectURL(file2),
-                name: file2.name,
-                size: `${(file2.size / 1024 / 1024).toFixed(2)} MB`,
-                fileSizeBytes: file2.size,
-                resolution: "Unknown",
-                date: new Date(file2.lastModified).toLocaleString(),
-                filePath: image2.filePath,
-              }
-            ]
-           });
-        }
+        newGroups.push({
+          id: `group-${pair.firstIndex}-${pair.secondIndex}`,
+          similarity: pair.similarity,
+          images: [
+            toImageFile(first, pair.firstIndex),
+            toImageFile(second, pair.secondIndex),
+          ],
+        });
       }
 
       // Add remaining images as singles? No, this is a diff tool, only show pairs.
@@ -419,6 +404,8 @@ export default function Home() {
                                   group={group} 
                                   onToggleMark={(imageId) => handleToggleMark(group.id, imageId)} 
                                   onToggleMarkAll={(markAll) => handleToggleMarkGroup(group.id, markAll)}
+                                  selectedPreviewId={selectedPreview?.id}
+                                  onSelectPreview={(image) => setSelectedPreviewId(image.id)}
                               />
                           </motion.div>
                       ))
@@ -445,6 +432,7 @@ export default function Home() {
             onRescan={handleRescan}
             onFilesSelected={handleFilesSelected}
             scanSummary={scanSummary}
+            selectedPreview={selectedPreview}
           />
         </Panel>
       </PanelGroup>

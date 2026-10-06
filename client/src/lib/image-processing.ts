@@ -89,3 +89,92 @@ export function calculateSimilarity(hash1: string, hash2: string): number {
   // Scale to percentage (0-100)
   return Math.round(similarity * 100);
 }
+
+export interface SimilarityPair {
+  firstIndex: number;
+  secondIndex: number;
+  similarity: number;
+}
+
+const MAX_RETAINED_CANDIDATES = 250_000;
+
+/**
+ * Select disjoint matches by ranking every qualifying pair together, instead
+ * of letting the first file in a folder claim its best remaining neighbor.
+ * Stable keys make equal-score decisions repeatable across scans.
+ */
+export function findBestSimilarityPairs(
+  hashes: readonly string[],
+  stableKeys: readonly string[],
+  minimumSimilarity = 60,
+): SimilarityPair[] {
+  const candidates: SimilarityPair[] = [];
+  let candidateLimitExceeded = false;
+
+  outer: for (let i = 0; i < hashes.length; i++) {
+    for (let j = i + 1; j < hashes.length; j++) {
+      const similarity = calculateSimilarity(hashes[i], hashes[j]);
+      if (similarity < minimumSimilarity) continue;
+
+      if (candidates.length >= MAX_RETAINED_CANDIDATES) {
+        candidateLimitExceeded = true;
+        break outer;
+      }
+
+      const keyOrder = (stableKeys[i] ?? String(i)).localeCompare(stableKeys[j] ?? String(j));
+      candidates.push({
+        firstIndex: keyOrder <= 0 ? i : j,
+        secondIndex: keyOrder <= 0 ? j : i,
+        similarity,
+      });
+    }
+  }
+
+  // Dense folders can produce millions of candidate edges. In that case,
+  // avoid retaining a huge edge list and use a deterministic, bounded-memory
+  // fallback over the already stably ordered files.
+  if (candidateLimitExceeded) {
+    const used = new Uint8Array(hashes.length);
+    const pairs: SimilarityPair[] = [];
+
+    for (let i = 0; i < hashes.length; i++) {
+      if (used[i]) continue;
+
+      let bestIndex = -1;
+      let bestSimilarity = minimumSimilarity - 1;
+      for (let j = i + 1; j < hashes.length; j++) {
+        if (used[j]) continue;
+        const similarity = calculateSimilarity(hashes[i], hashes[j]);
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity;
+          bestIndex = j;
+        }
+      }
+
+      if (bestIndex !== -1) {
+        used[i] = 1;
+        used[bestIndex] = 1;
+        pairs.push({ firstIndex: i, secondIndex: bestIndex, similarity: bestSimilarity });
+      }
+    }
+
+    return pairs.sort((a, b) => b.similarity - a.similarity);
+  }
+
+  candidates.sort((a, b) =>
+    b.similarity - a.similarity
+    || (stableKeys[a.firstIndex] ?? String(a.firstIndex)).localeCompare(stableKeys[b.firstIndex] ?? String(b.firstIndex))
+    || (stableKeys[a.secondIndex] ?? String(a.secondIndex)).localeCompare(stableKeys[b.secondIndex] ?? String(b.secondIndex))
+  );
+
+  const used = new Uint8Array(hashes.length);
+  const pairs: SimilarityPair[] = [];
+  for (const candidate of candidates) {
+    if (used[candidate.firstIndex] || used[candidate.secondIndex]) continue;
+    used[candidate.firstIndex] = 1;
+    used[candidate.secondIndex] = 1;
+    pairs.push(candidate);
+  }
+
+  return pairs;
+}

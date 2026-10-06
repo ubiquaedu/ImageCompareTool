@@ -1,5 +1,5 @@
 import { DuplicateGroup, ImageFile } from "@/lib/mock-data";
-import { Check, Trash2, Maximize2, Info, ZoomIn, ZoomOut } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,17 @@ interface ComparisonViewProps {
   group: DuplicateGroup;
   onToggleMark: (imageId: string) => void;
   onToggleMarkAll?: (markAll: boolean) => void;
+  selectedPreviewId?: string | null;
+  onSelectPreview?: (image: ImageFile) => void;
 }
 
-export function ComparisonView({ group, onToggleMark, onToggleMarkAll }: ComparisonViewProps) {
+export function ComparisonView({
+  group,
+  onToggleMark,
+  onToggleMarkAll,
+  selectedPreviewId,
+  onSelectPreview,
+}: ComparisonViewProps) {
   const allMarked = group.images.every(img => img.isMarkedForDeletion);
   
   return (
@@ -43,8 +51,6 @@ export function ComparisonView({ group, onToggleMark, onToggleMarkAll }: Compari
                 {allMarked ? "Keep All" : "Mark All"}
               </Button>
             )}
-            <Button variant="outline" size="icon" className="h-8 w-8"><ZoomIn className="h-4 w-4" /></Button>
-            <Button variant="outline" size="icon" className="h-8 w-8"><ZoomOut className="h-4 w-4" /></Button>
         </div>
       </div>
 
@@ -60,6 +66,8 @@ export function ComparisonView({ group, onToggleMark, onToggleMarkAll }: Compari
             image={img} 
             isMarked={img.isMarkedForDeletion} 
             onToggle={() => onToggleMark(img.id)} 
+            isSelected={img.id === selectedPreviewId}
+            onSelect={() => onSelectPreview?.(img)}
           />
         ))}
       </div>
@@ -70,11 +78,15 @@ export function ComparisonView({ group, onToggleMark, onToggleMarkAll }: Compari
 function ImageCard({ 
   image, 
   isMarked, 
-  onToggle 
+  onToggle,
+  isSelected,
+  onSelect,
 }: { 
   image: ImageFile; 
   isMarked?: boolean; 
   onToggle: () => void; 
+  isSelected?: boolean;
+  onSelect: () => void;
 }) {
   // Extract file extension to display prominently
   const getExtension = (filename: string) => {
@@ -90,30 +102,33 @@ function ImageCard({
   return (
     <div 
       className={cn(
-        "relative group flex flex-col rounded-xl border bg-card overflow-hidden transition-all duration-300 min-h-[300px]",
+        "relative group flex flex-col rounded-xl border bg-card overflow-hidden transition-all duration-300 min-h-[220px]",
+        isSelected && "border-primary ring-2 ring-primary/20",
         isMarked ? "border-destructive/50 ring-1 ring-destructive/20 opacity-60" : "border-border hover:border-primary/50"
       )}
     >
       {/* Image Container */}
-      <div className="relative flex-1 min-h-[350px] bg-black/5 overflow-hidden">
-        <img 
-          src={image.src} 
-          alt={image.name} 
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-label={`Show ${image.name} in the side preview`}
+        aria-pressed={isSelected}
+        className="relative block h-[175px] w-full bg-black/5 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      >
+        <img
+          src={image.src}
+          alt={image.name}
           className="absolute inset-0 w-full h-full object-contain p-2"
         />
-        
-        {/* Overlay Actions */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4">
-          <div className="flex justify-end">
-             <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border-white/10">
-                <Maximize2 className="h-4 w-4" />
-             </Button>
-          </div>
-        </div>
-      </div>
+        {isSelected && (
+          <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground shadow">
+            Preview
+          </span>
+        )}
+      </button>
 
       {/* Details Footer */}
-      <div className="p-4 bg-card border-t flex flex-col gap-3">
+      <div className="p-3 bg-card border-t flex flex-col gap-2">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h3 className="font-medium text-sm truncate" title={image.name}>{image.name}</h3>

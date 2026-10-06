@@ -13,6 +13,7 @@ import {
   Play
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { ImageFile } from "@/lib/mock-data";
 
 interface SimilarityControlsProps {
   threshold: number;
@@ -26,6 +27,7 @@ interface SimilarityControlsProps {
     wastedSpaceMB: number;
     duplicatesCount: number;
   };
+  selectedPreview: ImageFile | null;
 }
 
 export function SimilarityControls({
@@ -35,7 +37,8 @@ export function SimilarityControls({
   onMarkThresholdCandidates,
   onRescan,
   onFilesSelected,
-  scanSummary
+  scanSummary,
+  selectedPreview,
 }: SimilarityControlsProps) {
   const [selectedPath, setSelectedPath] = useState<string>("");
   const [fileCount, setFileCount] = useState<number>(0);
@@ -117,6 +120,41 @@ export function SimilarityControls({
 
       <Separator />
 
+      <section className="space-y-3" aria-label="Selected image preview">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display font-semibold text-lg flex items-center gap-2">
+            <ImageIcon className="h-5 w-5 text-primary" />
+            Preview
+          </h2>
+          {selectedPreview && (
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Selected</span>
+          )}
+        </div>
+        {selectedPreview ? (
+          <>
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-black/5">
+              <img
+                src={selectedPreview.src}
+                alt={selectedPreview.name}
+                className="absolute inset-0 h-full w-full object-contain p-2"
+              />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <p className="truncate text-sm font-medium" title={selectedPreview.name}>{selectedPreview.name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {selectedPreview.resolution} · {selectedPreview.size}
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="flex aspect-[4/3] items-center justify-center rounded-lg border border-dashed bg-muted/30 px-4 text-center text-xs text-muted-foreground">
+            Select an image in the comparison list to preview it here.
+          </div>
+        )}
+      </section>
+
+      <Separator />
+
       {/* Filters Header */}
       <div>
         <h2 className="font-display font-semibold text-lg flex items-center gap-2">
@@ -141,7 +179,7 @@ export function SimilarityControls({
             onValueChange={(vals) => setThreshold(vals[0])}
             min={0}
             max={100}
-            step={1}
+            step={5}
             className="cursor-pointer"
           />
           <div className="flex justify-between text-[10px] text-muted-foreground font-mono uppercase">
